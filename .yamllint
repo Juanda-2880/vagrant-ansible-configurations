@@ -1,4 +1,7 @@
 extends: default
+ignore: |
+  .github/
+  .vagrant/
 rules:
   line-length: disable
   document-start: disable
@@ -6,3 +9,5 @@ rules:
   trailing-spaces: disable
   new-line-at-end-of-file: disable
   empty-lines: disable
+  braces: disable
+  brackets: disable
