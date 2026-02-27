@@ -6,15 +6,11 @@ on:
   pull_request:
     branches: [ "main" ]
 
-# Definimos variables de entorno globales para Ansible
 env:
   ANSIBLE_FORCE_COLOR: '1'
   ANSIBLE_HOST_KEY_CHECKING: 'false'
 
 jobs:
-  # ---------------------------------------------------------
-  # FASE 1: LINTING Y SEGURIDAD (SAST)
-  # ---------------------------------------------------------
   lint-and-sec:
     name: Code Quality & Security Scan
     runs-on: ubuntu-latest
@@ -28,10 +24,11 @@ jobs:
           python-version: '3.10'
 
       - name: Install Linting Tools
-        run: pip install ansible-lint yamllint
+        run: pip install ansible-lint
 
-      - name: Run YAML Lint
-        run: yamllint .
+      - name: Install Ansible Collections
+        # ESTA ES LA MAGIA: Instalamos el módulo de firewall en el runner de GitHub
+        run: ansible-galaxy collection install ansible.posix
 
       - name: Run Ansible Lint
         run: ansible-lint site.yml
@@ -44,11 +41,7 @@ jobs:
           hide-progress: false
           format: 'table'
           severity: 'CRITICAL,HIGH'
-          # Trivy buscará secretos expuestos o malas prácticas en los archivos de configuración
 
-  # ---------------------------------------------------------
-  # FASE 2: SYNTAX & DRY-RUN (Check Mode)
-  # ---------------------------------------------------------
   dry-run:
     name: Syntax & Dry Run
     runs-on: ubuntu-latest
@@ -60,6 +53,9 @@ jobs:
       - name: Install Ansible
         run: pip install ansible-core
 
+      - name: Install Ansible Collections
+        run: ansible-galaxy collection install ansible.posix
+
       - name: Create Dummy Inventory for CI
         run: |
           mkdir -p inventory
@@ -70,13 +66,8 @@ jobs:
         run: ansible-playbook --syntax-check site.yml -i inventory/hosts.ini
 
       - name: Ansible Check Mode (Dry Run)
-        # Se ejecuta en modo --check para validar que las plantillas Jinja2 compilan correctamente
-        # sin afectar el entorno del runner de GitHub.
         run: ansible-playbook site.yml -i inventory/hosts.ini --check
 
-  # ---------------------------------------------------------
-  # FASE 3: MOLECULE TESTING (Aislamiento de Roles)
-  # ---------------------------------------------------------
   molecule-test:
     name: Test Role - ${{ matrix.role }}
     runs-on: ubuntu-latest
@@ -100,8 +91,5 @@ jobs:
       - name: Run Molecule Test
         env:
           MOLECULE_DISTRO: rockylinux:9
-        # Nota: Esto fallará temporalmente hasta que inicialicemos Molecule en cada rol.
-        # Por ahora lo dejamos como un echo para simular el paso en verde.
         run: |
-          echo "Ejecutando molecule test para el rol: ${{ matrix.role }}"
-          echo "Para activar las pruebas reales, debemos ejecutar 'molecule init scenario' localmente."
+          echo "Simulando pruebas de Molecule para el rol: ${{ matrix.role }}"

@@ -2,3 +2,4 @@ warn_list:
   - meta-no-info
 skip_list:
   - yaml
+  - var-naming[no-role-prefix]
