@@ -1,4 +1,4 @@
-# DevSecOps Lab: DHCP & DNS (Rocky Linux 9)
+# Lab: DHCP & DNS (Rocky Linux 9)
 
 Infraestructura como Código (IaC) para desplegar servicios base de red utilizando Ansible y Vagrant.
 
