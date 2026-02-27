@@ -1,0 +1,46 @@
+options {
+    listen-on port 53 { 127.0.0.1; {{ dns_server_ip }}; };
+    directory       "/var/named";
+    dump-file       "/var/named/data/cache_dump.db";
+    statistics-file "/var/named/data/named_stats.txt";
+    memstatistics-file "/var/named/data/named_mem_stats.txt";
+    allow-query     { localhost; {{ network_subnet }}/24; };
+    recursion yes;
+
+    forwarders {
+        {% for fw in dns_forwarders %}
+        {{ fw }};
+        {% endfor %}
+    };
+    forward only;
+
+    dnssec-validation yes;
+    bindkeys-file "/etc/named.root.key";
+    managed-keys-directory "/var/named/dynamic";
+    pid-file "/run/named/named.pid";
+    session-keyfile "/run/named/session.key";
+};
+
+logging {
+    channel default_debug {
+        file "data/named.run";
+        severity dynamic;
+    };
+};
+
+zone "." IN {
+    type hint;
+    file "named.ca";
+};
+
+zone "{{ bind_zone_name }}" IN {
+    type master;
+    file "{{ bind_zone_name }}.zone";
+    allow-update { none; };
+};
+
+zone "{{ bind_reverse_zone }}" IN {
+    type master;
+    file "{{ bind_reverse_zone }}.zone";
+    allow-update { none; };
+};

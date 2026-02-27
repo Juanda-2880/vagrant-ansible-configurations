@@ -1,0 +1,4 @@
+---
+# Variables por defecto del rol (pueden ser sobreescritas por group_vars)
+bind_zone_name: "{{ domain_name }}"
+bind_reverse_zone: "33.168.192.in-addr.arpa"

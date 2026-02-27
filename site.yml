@@ -1,0 +1,7 @@
+---
+- name: Provisión de servidor DNS y DHCP en Rocky Linux 9
+  hosts: dns_dhcp_servers
+  become: true
+  roles:
+    - dns_bind
+    - dhcpd

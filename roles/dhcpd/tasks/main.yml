@@ -1,0 +1,29 @@
+---
+- name: Instalar servidor DHCP
+  ansible.builtin.dnf:
+    name: dhcp-server
+    state: present
+
+- name: Configurar dhcpd.conf
+  ansible.builtin.template:
+    src: dhcpd.conf.j2
+    dest: /etc/dhcp/dhcpd.conf
+    owner: root
+    group: root
+    mode: '0644'
+    # Validación sintáctica antes de aplicar
+    validate: 'dhcpd -t -cf %s'
+  notify: Restart dhcpd
+
+- name: Abrir puerto DHCP en Firewalld
+  ansible.posix.firewalld:
+    service: dhcp
+    permanent: yes
+    state: enabled
+    immediate: yes
+
+- name: Habilitar e iniciar servicio dhcpd
+  ansible.builtin.systemd:
+    name: dhcpd
+    enabled: yes
+    state: started

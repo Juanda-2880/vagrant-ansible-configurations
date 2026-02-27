@@ -1,0 +1,23 @@
+# Configuración DHCP generada por Ansible
+authoritative;
+default-lease-time 600;
+max-lease-time 7200;
+
+option domain-name "{{ domain_name }}";
+option domain-name-servers {{ dns_server_ip }};
+
+subnet {{ network_subnet }} netmask {{ network_mask }} {
+    range {{ dhcp_range_start }} {{ dhcp_range_end }};
+    option routers {{ dhcp_gateway }};
+    option broadcast-address {{ dhcp_broadcast }};
+}
+
+# Ejemplo de reserva por MAC:
+# {% if dhcp_reservations is defined %}
+# {% for host in dhcp_reservations %}
+# host {{ host.name }} {
+#     hardware ethernet {{ host.mac }};
+#     fixed-address {{ host.ip }};
+# }
+# {% endfor %}
+# {% endif %}

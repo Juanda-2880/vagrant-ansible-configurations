@@ -1,0 +1,54 @@
+---
+- name: Instalar paquetes de BIND
+  ansible.builtin.dnf:
+    name:
+      - bind
+      - bind-utils
+    state: present
+
+- name: Configurar named.conf
+  ansible.builtin.template:
+    src: named.conf.j2
+    dest: /etc/named.conf
+    owner: root
+    group: named
+    mode: '0640'
+    validate: 'named-checkconf %s'
+  notify: Restart named
+
+- name: Obtener fecha para el serial DNS
+  ansible.builtin.setup:
+    filter: ansible_date_time
+
+- name: Desplegar zona forward
+  ansible.builtin.template:
+    src: zone.forward.j2
+    dest: "/var/named/{{ bind_zone_name }}.zone"
+    owner: root
+    group: named
+    mode: '0640'
+    validate: "named-checkzone {{ bind_zone_name }} %s"
+  notify: Restart named
+
+- name: Desplegar zona reverse
+  ansible.builtin.template:
+    src: zone.reverse.j2
+    dest: "/var/named/{{ bind_reverse_zone }}.zone"
+    owner: root
+    group: named
+    mode: '0640'
+    validate: "named-checkzone {{ bind_reverse_zone }} %s"
+  notify: Restart named
+
+- name: Abrir puertos DNS en Firewalld
+  ansible.posix.firewalld:
+    service: dns
+    permanent: yes
+    state: enabled
+    immediate: yes
+
+- name: Habilitar e iniciar servicio named
+  ansible.builtin.systemd:
+    name: named
+    enabled: yes
+    state: started

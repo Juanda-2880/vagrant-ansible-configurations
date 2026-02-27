@@ -1,0 +1,13 @@
+$TTL 86400
+@   IN  SOA     server.{{ bind_zone_name }}. root.{{ bind_zone_name }}. (
+            {{ ansible_date_time.year }}{{ ansible_date_time.month }}{{ ansible_date_time.day }}01 ; Serial
+            3600        ; Refresh
+            1800        ; Retry
+            604800      ; Expire
+            86400 )     ; Minimum TTL
+
+; Name Servers
+@   IN  NS      server.{{ bind_zone_name }}.
+
+; PTR Records
+10  IN  PTR     server.{{ bind_zone_name }}.
