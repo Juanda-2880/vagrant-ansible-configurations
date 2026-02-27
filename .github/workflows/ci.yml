@@ -27,7 +27,6 @@ jobs:
         run: pip install ansible-lint
 
       - name: Install Ansible Collections
-        # ESTA ES LA MAGIA: Instalamos el módulo de firewall en el runner de GitHub
         run: ansible-galaxy collection install ansible.posix
 
       - name: Run Ansible Lint
@@ -45,13 +44,18 @@ jobs:
   dry-run:
     name: Syntax & Dry Run
     runs-on: ubuntu-latest
-    needs: lint-and-sec
+    # LA MAGIA: Corremos este job dentro de un contenedor nativo de Rocky Linux
+    container:
+      image: rockylinux:9
     steps:
+      - name: Prepare Rocky Container
+        # Instalamos Git, Tar (necesario para las colecciones) y Ansible
+        run: |
+          dnf install -y epel-release git tar
+          dnf install -y ansible-core
+
       - name: Checkout Repository
         uses: actions/checkout@v4
-
-      - name: Install Ansible
-        run: pip install ansible-core
 
       - name: Install Ansible Collections
         run: ansible-galaxy collection install ansible.posix
