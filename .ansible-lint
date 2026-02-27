@@ -1,0 +1,4 @@
+warn_list:
+  - meta-no-info
+skip_list:
+  - yaml
