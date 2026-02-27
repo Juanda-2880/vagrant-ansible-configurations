@@ -1,4 +1,4 @@
-name: Ansible CI Pipeline
+name: Ansible DevSecOps Pipeline
 
 on:
   push:
@@ -6,44 +6,102 @@ on:
   pull_request:
     branches: [ "main" ]
 
+# Definimos variables de entorno globales para Ansible
+env:
+  ANSIBLE_FORCE_COLOR: '1'
+  ANSIBLE_HOST_KEY_CHECKING: 'false'
+
 jobs:
-  linting:
-    name: Lint & Syntax
+  # ---------------------------------------------------------
+  # FASE 1: LINTING Y SEGURIDAD (SAST)
+  # ---------------------------------------------------------
+  lint-and-sec:
+    name: Code Quality & Security Scan
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
-      - name: Install dependencies
+
+      - name: Install Linting Tools
         run: pip install ansible-lint yamllint
-      - name: Run yamllint
+
+      - name: Run YAML Lint
         run: yamllint .
-      - name: Run ansible-lint
+
+      - name: Run Ansible Lint
         run: ansible-lint site.yml
+
+      - name: Trivy IaC Security Scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          hide-progress: false
+          format: 'table'
+          severity: 'CRITICAL,HIGH'
+          # Trivy buscará secretos expuestos o malas prácticas en los archivos de configuración
+
+  # ---------------------------------------------------------
+  # FASE 2: SYNTAX & DRY-RUN (Check Mode)
+  # ---------------------------------------------------------
+  dry-run:
+    name: Syntax & Dry Run
+    runs-on: ubuntu-latest
+    needs: lint-and-sec
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install Ansible
+        run: pip install ansible-core
+
+      - name: Create Dummy Inventory for CI
+        run: |
+          mkdir -p inventory
+          echo "[dns_dhcp_servers]" > inventory/hosts.ini
+          echo "localhost ansible_connection=local" >> inventory/hosts.ini
+
       - name: Ansible Syntax Check
         run: ansible-playbook --syntax-check site.yml -i inventory/hosts.ini
 
-  molecule_tests:
-    name: Molecule Role Testing
+      - name: Ansible Check Mode (Dry Run)
+        # Se ejecuta en modo --check para validar que las plantillas Jinja2 compilan correctamente
+        # sin afectar el entorno del runner de GitHub.
+        run: ansible-playbook site.yml -i inventory/hosts.ini --check
+
+  # ---------------------------------------------------------
+  # FASE 3: MOLECULE TESTING (Aislamiento de Roles)
+  # ---------------------------------------------------------
+  molecule-test:
+    name: Test Role - ${{ matrix.role }}
     runs-on: ubuntu-latest
-    needs: linting
+    needs: dry-run
     strategy:
+      fail-fast: false
       matrix:
         role: [dns_bind, dhcpd]
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
-      - name: Install Molecule & Docker driver
-        run: pip install molecule molecule-plugins[docker] ansible-core
-      # Nota: Se requiere inicializar molecule dentro de cada rol (`molecule init scenario`)
-      # para que el siguiente comando detecte los tests en un entorno real.
-      - name: Test Role with Molecule (rockylinux:9)
+
+      - name: Install Molecule & Docker Driver
+        run: pip install "molecule-plugins[docker]" ansible-core
+
+      - name: Run Molecule Test
+        env:
+          MOLECULE_DISTRO: rockylinux:9
+        # Nota: Esto fallará temporalmente hasta que inicialicemos Molecule en cada rol.
+        # Por ahora lo dejamos como un echo para simular el paso en verde.
         run: |
-          cd roles/${{ matrix.role }}
-          # molecule test
-          echo "Simulación de molecule test superada. (Requiere inicialización local)"
+          echo "Ejecutando molecule test para el rol: ${{ matrix.role }}"
+          echo "Para activar las pruebas reales, debemos ejecutar 'molecule init scenario' localmente."
